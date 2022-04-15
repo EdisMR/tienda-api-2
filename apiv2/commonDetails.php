@@ -1,5 +1,7 @@
 <?php
-/* SISTEMA DE LA TIENDA */
+/* ******************************* */
+/* ********  API DE LA TIENDA  ******** */
+/* ******************************* */
 
 function getDBDetails(){
 	return mysqli_connect(
