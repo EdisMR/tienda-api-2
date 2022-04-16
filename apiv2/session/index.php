@@ -4,32 +4,82 @@
 /* ********************************** */
 require "../common.php";
 
-/* validate session from post input using ajax */
-if (isset($_POST['email']) && isset($_POST['password'])) {
-	$email = $_POST['email'];
-	$password = $_POST['password'];
-	if (!empty($email) && !empty($password)) {
-		$query = "SELECT * FROM usuarios WHERE usuario = :email AND contrasenia = :password";
-		$query_params = array(':email' => $email, ':password' => $password);
-		try {
-			$stmt = $db->prepare($query);
-			$result = $stmt->execute($query_params);
-		} catch (PDOException $ex) {
-			die("Failed to run query: " . $ex->getMessage());
-		}
-		$row = $stmt->fetch();
-		if ($row) {
-			session_start();
-			$_SESSION['user_id'] = $row['user_id'];
-			$_SESSION['email'] = $row['email'];
-			$_SESSION['logged_in'] = true;
-			echo json_encode(array('success' => true));
-		} else {
-			echo json_encode(array('error' => 'Email or password is incorrect'));
-		}
+/* api rest switch */
+switch ($method) {
+	case 'POST':
+		managePost();
+		break;
+	case 'DELETE':
+		closeSession();
+		break;
+	default:
+		http_response_code(400);
+		echo json_encode(array("error" => "Invalid request"));
+		break;
+}
+
+
+
+
+
+function managePost()
+{
+	if (isset($_POST["submit"])) {
+		validateUser();
 	} else {
-		echo json_encode(array('error' => 'Email or password is empty'));
+		getSession();
 	}
-} else {
-	echo json_encode(array('error' => 'Email or password is not set'));
+}
+
+
+function closeSession()
+{
+	session_start();
+	// remove all session variables
+	session_unset();
+
+	// destroy the session
+	session_destroy();
+	echo json_encode(array("success" => "Session closed"));
+}
+
+
+
+
+
+function getSession()
+{
+	session_start();
+	if (isset($_SESSION["user"])) {
+		echo json_encode(array("success" => "Session opened", "user" => $_SESSION["user"]));
+	} else {
+		echo json_encode(array("error" => "Session not opened"));
+	}
+}
+
+
+
+
+
+function validateUser()
+{
+	/* validate session from post input and format as json*/
+	$usuario = $_POST["usuario"];
+	$contrasenia = $_POST["contrasenia"];
+
+	$query = mysqli_query($GLOBALS["conn"], "SELECT * FROM usuarios WHERE usuario = '$usuario' AND contrasenia = '$contrasenia'");
+
+	// esto válida si la consulta se ejecuto correctamente o no
+	// pero en ningún caso válida si devolvió algún registro
+	if ($query) {
+		if ($user = mysqli_fetch_assoc($query)) {
+			// el usuario y la pwd son correctas
+			session_start();
+			$_SESSION["user"] = "$usuario";
+			echo json_encode(array("success" => "Session opened", "user" => $user));
+		} else {
+			// Usuario incorrecto o no existe
+			echo json_encode(array("error" => "Usuario o contraseña incorrectos"));
+		}
+	}
 }
